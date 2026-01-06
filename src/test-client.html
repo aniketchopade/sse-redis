@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSE Test Client</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1f2937 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #0f172a;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: #f8fafc;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.25em;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        input[type="text"],
+        input[type="url"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="url"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-connect {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-disconnect {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-clear {
+            background: #6b7280;
+            color: white;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-connected {
+            background: #10b981;
+        }
+
+        .status-disconnected {
+            background: #ef4444;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-text {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .event-counter {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .events-container {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            background: #fafafa;
+        }
+
+        .event-item {
+            background: white;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .event-type {
+            font-weight: 700;
+            color: #667eea;
+            font-size: 1.1em;
+            text-transform: uppercase;
+        }
+
+        .event-time {
+            font-size: 0.85em;
+            color: #999;
+        }
+
+        .event-data {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Scrollbar styling */
+        .events-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .events-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .events-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .events-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SSE Test Client</h1>
+            <p>Server-Sent Events with Redis Pub/Sub</p>
+        </div>
+
+        <div class="card">
+            <h2>Connection Settings</h2>
+            <div class="form-group">
+                <label for="serverUrl">Server URL</label>
+                <input type="url" id="serverUrl" placeholder="http://localhost:3000" value="http://localhost:3000">
+            </div>
+            <div class="form-group">
+                <label for="clientName">Client Name</label>
+                <input type="text" id="clientName" placeholder="STORE001-LANE01" value="STORE001-LANE01">
+            </div>
+            <div class="button-group">
+                <button class="btn-connect" id="connectBtn" onclick="connect()">
+                    Connect
+                </button>
+                <button class="btn-disconnect" id="disconnectBtn" onclick="disconnect()" disabled>
+                    Disconnect
+                </button>
+                <button class="btn-clear" onclick="clearEvents()">
+                    Clear Events
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="status-bar">
+                <div class="status-indicator">
+                    <div class="status-dot status-disconnected" id="statusDot"></div>
+                    <span class="status-text" id="statusText">Disconnected</span>
+                </div>
+                <div class="event-counter" id="eventCounter">0 events received</div>
+            </div>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalEvents">0</div>
+                    <div class="stat-label">Total Events</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="connectionTime">00:00</div>
+                    <div class="stat-label">Connected Time</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="podName">-</div>
+                    <div class="stat-label">Connected Pod</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Event Stream</h2>
+            <div class="events-container" id="eventsContainer">
+                <div class="empty-state">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                    </svg>
+                    <p>No events yet. Connect to start receiving events.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let eventSource = null;
+        let eventCount = 0;
+        let connectionStartTime = null;
+        let timerInterval = null;
+
+        function updateStatus(connected, message) {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+
+            if (connected) {
+                statusDot.className = 'status-dot status-connected';
+                statusText.textContent = message || 'Connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+            } else {
+                statusDot.className = 'status-dot status-disconnected';
+                statusText.textContent = message || 'Disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+            }
+        }
+
+        function updateConnectionTimer() {
+            if (!connectionStartTime) return;
+            
+            const now = Date.now();
+            const elapsed = Math.floor((now - connectionStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            
+            document.getElementById('connectionTime').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function addEvent(event) {
+            eventCount++;
+            
+            const container = document.getElementById('eventsContainer');
+            const emptyState = container.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            const eventItem = document.createElement('div');
+            eventItem.className = 'event-item';
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const eventType = event.type || event.action || 'unknown';
+            const eventData = JSON.stringify(event, null, 2);
+
+            eventItem.innerHTML = `
+                <div class="event-header">
+                    <span class="event-type">${eventType}</span>
+                    <span class="event-time">${timestamp}</span>
+                </div>
+                <div class="event-data">${eventData}</div>
+            `;
+
+            container.insertBefore(eventItem, container.firstChild);
+
+            // Update counters
+            document.getElementById('eventCounter').textContent = `${eventCount} events received`;
+            document.getElementById('totalEvents').textContent = eventCount;
+
+            // Auto-scroll to top for new events
+            container.scrollTop = 0;
+        }
+
+        async function connect() {
+            const serverUrl = document.getElementById('serverUrl').value.trim();
+            const clientName = document.getElementById('clientName').value.trim();
+
+            if (!serverUrl || !clientName) {
+                alert('Please enter both server URL and client name');
+                return;
+            }
+
+            try {
+                updateStatus(false, 'Connecting...');
+
+                // Register client
+                const registerUrl = `${serverUrl}/register`;
+                const response = await fetch(registerUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ clientName })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Registration failed: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('Registration response:', data);
+
+                // Connect to SSE endpoint
+                const sseUrl = `${serverUrl}/events/${clientName}`;
+                eventSource = new EventSource(sseUrl);
+
+                eventSource.onopen = () => {
+                    console.log('SSE connection opened');
+                    updateStatus(true, 'Connected');
+                    connectionStartTime = Date.now();
+                    timerInterval = setInterval(updateConnectionTimer, 1000);
+                    document.getElementById('podName').textContent = data.podName || '-';
+                };
+
+                eventSource.onmessage = (e) => {
+                    console.log('Received event:', e.data);
+                    try {
+                        const event = JSON.parse(e.data);
+                        addEvent(event);
+                    } catch (err) {
+                        console.error('Failed to parse event:', err);
+                    }
+                };
+
+                eventSource.onerror = (err) => {
+                    console.error('SSE error:', err);
+                    updateStatus(false, 'Connection error');
+                    if (timerInterval) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                    }
+                    if (eventSource) {
+                        eventSource.close();
+                        eventSource = null;
+                    }
+                };
+
+            } catch (err) {
+                console.error('Connection failed:', err);
+                alert(`Connection failed: ${err.message}`);
+                updateStatus(false, 'Connection failed');
+            }
+        }
+
+        function disconnect() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            
+            connectionStartTime = null;
+            updateStatus(false, 'Disconnected');
+            console.log('Disconnected from SSE');
+        }
+
+        function clearEvents() {
+            const container = document.getElementById('eventsContainer');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                    </svg>
+                    <p>Events cleared. Waiting for new events...</p>
+                </div>
+            `;
+            eventCount = 0;
+            document.getElementById('eventCounter').textContent = '0 events received';
+            document.getElementById('totalEvents').textContent = '0';
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            disconnect();
+        });
+
+        // Allow Enter key to connect
+        document.getElementById('clientName').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !document.getElementById('connectBtn').disabled) {
+                connect();
+            }
+        });
+    </script>
+</body>
+</html>

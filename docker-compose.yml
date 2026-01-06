@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # Redis service
+  redis:
+    image: redis:7-alpine
+    container_name: sse-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - sse-network
+
+  # SSE Server (3 replicas for testing multi-pod behavior)
+  sse-server-1:
+    build: .
+    container_name: sse-server-1
+    ports:
+      - "3001:3000"
+    environment:
+      - PORT=3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_CHANNEL=events-to-store
+      - POD_NAME=sse-server-1
+      - NODE_ENV=production
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - sse-network
+    restart: unless-stopped
+
+  sse-server-2:
+    build: .
+    container_name: sse-server-2
+    ports:
+      - "3002:3000"
+    environment:
+      - PORT=3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_CHANNEL=events-to-store
+      - POD_NAME=sse-server-2
+      - NODE_ENV=production
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - sse-network
+    restart: unless-stopped
+
+  sse-server-3:
+    build: .
+    container_name: sse-server-3
+    ports:
+      - "3003:3000"
+    environment:
+      - PORT=3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_CHANNEL=events-to-store
+      - POD_NAME=sse-server-3
+      - NODE_ENV=production
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - sse-network
+    restart: unless-stopped
+
+networks:
+  sse-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+    driver: local

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sse-redis-config
+  namespace: default
+data:
+  PORT: "3000"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  REDIS_CHANNEL: "events-to-store"
+  NODE_ENV: "production"

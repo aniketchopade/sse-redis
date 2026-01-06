@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sse-redis-service
+  namespace: default
+  labels:
+    app: sse-redis-server
+spec:
+  type: LoadBalancer
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
+  selector:
+    app: sse-redis-server
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 3000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: default
+  labels:
+    app: redis
+spec:
+  type: ClusterIP
+  selector:
+    app: redis
+  ports:
+  - name: redis
+    protocol: TCP
+    port: 6379
+    targetPort: 6379
